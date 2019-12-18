@@ -8,6 +8,26 @@ const notifications = document.getElementById("notifications");
 const transfer = document.getElementById("transfer");
 const oldData = document.getElementById("old-data");
 
+//Polyfill
+if (!Promise.allSettled) {
+  Promise.allSettled = function(promises) {
+    return Promise.all(
+      promises.map(p =>
+        Promise.resolve(p).then(
+          value => ({
+            state: "fulfilled",
+            value
+          }),
+          reason => ({
+            state: "rejected",
+            reason
+          })
+        )
+      )
+    );
+  };
+}
+
 const USER_DATA = {
   subscriptions: [],
   liked: []
@@ -105,7 +125,7 @@ const getLikedVideos = (pageToken = null) => {
 
 const transferSubscriptions = () => {
   notify("Transferring subsciptions...");
-  return Promise.all(
+  return Promise.allSettled(
     USER_DATA.subscriptions.map(el =>
       gapi.client.youtube.subscriptions.insert({
         part: "snippet",
@@ -166,9 +186,29 @@ signinNewAccount.onclick = () => {
 };
 
 transfer.onclick = () => {
+  let numSubscriptions = 0;
+  let numLikedVideos = 0;
   transferSubscriptions()
+    .then(results => {
+      results.forEach((result, num) => {
+        if (result.status == "fulfilled") {
+          numSubscriptions += 1;
+        }
+      });
+    })
     .then(transferLikedVideos)
-    .then(() => notify("Transfer successful!"))
+    .then(results => {
+      results.forEach((result, num) => {
+        if (result.status == "fulfilled") {
+          numLikedVideos += 1;
+        }
+      });
+    })
+    .then(() =>
+      notify(
+        `${numSubscriptions}/${USER_DATA.subscriptions.length} subscriptions and ${numLikedVideos}/${USER_DATA.liked.length} liked videos transferred successfully!`
+      )
+    )
     .catch(err => {
       notify("Error. Please try again");
     });
