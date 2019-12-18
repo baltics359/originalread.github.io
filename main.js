@@ -31,6 +31,7 @@ const authenticate = () => {
         notify("Sign-in successful");
       },
       err => {
+        console.log(err);
         throw new Error("Sign-in failed. Please try again");
       }
     );
@@ -68,6 +69,8 @@ const getSubscriptions = (pageToken = null) => {
         }
       },
       err => {
+        console.log(err);
+
         throw new Error("Error fetching data. Please try again");
       }
     );
@@ -96,6 +99,8 @@ const getLikedVideos = (pageToken = null) => {
         }
       },
       err => {
+        console.log(err);
+
         throw new Error("Error fetching data. Please try again");
       }
     );
