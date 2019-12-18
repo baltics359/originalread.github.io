@@ -25,7 +25,7 @@ const authenticate = () => {
   notify("Signing in...");
   return gapi.auth2
     .getAuthInstance()
-    .signIn({ scope: "https://www.googleapis.com/auth/youtube.force-ssl" })
+    .signIn({ scope: "https://www.googleapis.com/auth/youtube" })
     .then(
       () => {
         notify("Sign-in successful");
