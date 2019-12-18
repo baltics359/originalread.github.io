@@ -5,14 +5,12 @@ const API_KEY = "AIzaSyCEg0x4xasL2A99F7A-mXoMP6g3Y-IHqj0";
 const signinOldAccount = document.getElementById("signin-old");
 const signinNewAccount = document.getElementById("signin-new");
 const notifications = document.getElementById("notifications");
-const status = document.getElementById("status");
 const transfer = document.getElementById("transfer");
 const oldData = document.getElementById("old-data");
 
 const USER_DATA = {
   subscriptions: [],
-  liked: [],
-  playlists: {}
+  liked: []
 };
 
 gapi.load("client:auth2", () => {
@@ -21,28 +19,6 @@ gapi.load("client:auth2", () => {
 
 const notify = msg => {
   notifications.innerHTML = msg;
-};
-
-const setStatus = msg => {
-  status.innerHTML = msg;
-};
-
-signinOldAccount.onclick = () => {
-  authenticate()
-    .then(loadClient)
-    .then(() => signinOldAccount.remove())
-    .then(() => getOldAccountData())
-    .then(() => {
-      notify("Data fetched successfully. Please sign in with your new account");
-      let content = `${USER_DATA.subscriptions.length} subscriptions | ${
-        USER_DATA.liked.length
-      } liked videos | ${Object.keys(USER_DATA.playlists).length} playlists`;
-      oldData.innerHTML = content;
-    })
-    .then(() => signinNewAccount.classList.remove("d-none"))
-    .catch(err => {
-      notify(err);
-    });
 };
 
 const authenticate = () => {
@@ -67,13 +43,6 @@ const loadClient = () => {
     .then(null, err => {
       throw new Error("Error. Please try again");
     });
-};
-
-const getOldAccountData = () => {
-  return getSubscriptions()
-    .then(getLikedVideos)
-    .then(getPlaylists)
-    .then(getPlaylistItems);
 };
 
 const getSubscriptions = (pageToken = null) => {
@@ -132,109 +101,6 @@ const getLikedVideos = (pageToken = null) => {
     );
 };
 
-const getPlaylists = (pageToken = null) => {
-  notify("Fetching your playlists...");
-
-  return gapi.client.youtube.playlists
-    .list({
-      part: "snippet",
-      maxResults: 50,
-      mine: true,
-      pageToken: pageToken ? pageToken : undefined
-    })
-    .then(
-      response => {
-        response.result.items.forEach(element => {
-          let id = element.id;
-          USER_DATA.playlists[id] = {
-            title: element.snippet.title,
-            description: element.snippet.description,
-            items: []
-          };
-        });
-        nextPage = response.result.nextPageToken;
-        if (nextPage)
-          return getPlaylists((pageToken = response.result.nextPageToken));
-        else {
-          notify("Playlists fetched successfully");
-        }
-      },
-      err => {
-        throw new Error("Error fetching data. Please try again");
-      }
-    );
-};
-
-const getPlaylistItems = (pageToken = null) => {
-  notify("Fetching your playlist items...");
-
-  return Promise.all(
-    Object.keys(USER_DATA.playlists).map(playlist =>
-      gapi.client.youtube.playlistItems
-        .list({
-          part: "contentDetails",
-          playlistId: playlist,
-          maxResults: 50,
-          pageToken: pageToken ? pageToken : undefined
-        })
-        .then(
-          response => {
-            response.result.items.forEach(element => {
-              USER_DATA.playlists[playlist].items.push(
-                element.contentDetails.videoId
-              );
-            });
-            nextPage = response.result.nextPageToken;
-            if (nextPage)
-              return getPlaylistItems(
-                (pageToken = response.result.nextPageToken)
-              );
-            else {
-              notify("Playlist items fetched successfully");
-            }
-          },
-          err => {
-            throw new Error("Error fetching data. Please try again");
-          }
-        )
-    )
-  );
-};
-
-signinNewAccount.onclick = () => {
-  authenticate()
-    .then(loadClient)
-    .then(() => {
-      notify("Signed in with new account");
-      signinNewAccount.remove();
-      transfer.classList.remove("d-none");
-    })
-    .catch(err => notify(err));
-};
-
-signinNewAccount.onclick = () => {
-  authenticate()
-    .then(loadClient)
-    .then(() => signinNewAccount.remove())
-    .then(() => notify("Signed in with new account. Please initiate transfer"))
-    .then(() => transfer.classList.remove("d-none"))
-    .catch(err => {
-      notify(err);
-    });
-};
-
-transfer.onclick = () => {
-  transferSubscriptions()
-    .then(transferLikedVideos)
-    .then(transferPlaylists)
-    .then(transferPlaylistItems)
-    .then(() => notify("Transfer successful!"))
-    .catch(err => {
-      console.log(err);
-      console.log(USER_DATA);
-    });
-};
-
 const transferSubscriptions = () => {
   notify("Transferring subsciptions...");
   return Promise.all(
@@ -266,49 +132,42 @@ const transferLikedVideos = () => {
   );
 };
 
-const transferPlaylists = () => {
-  notify("Transferring playlists...");
-  return Promise.all(
-    Object.values(USER_DATA.playlists).map(v =>
-      gapi.client.youtube.playlists
-        .insert({
-          part: "snippet",
-          resource: {
-            snippet: {
-              title: v.title,
-              description: v.description
-            }
-          }
-        })
-        .then(res => res.json())
-        .then(data => (USER_DATA.playlists[k].newId = data.id))
-    )
-  );
+const getOldAccountData = () => {
+  return getSubscriptions().then(getLikedVideos);
 };
 
-const transferPlaylistItems = () => {
-  notify("Transferring playlist items...");
-  promises = [];
-  Object.values(USER_DATA.playlists).forEach(pl => {
-    promises.push(
-      Promise.all(
-        pl.items.slice(1, 3).map(video =>
-          gapi.client.youtube.playlistItems.insert({
-            part: "snippet",
-            resource: {
-              snippet: {
-                playlistId: pl.newId,
-                // position: 0,
-                resourceId: {
-                  kind: "youtube#video",
-                  videoId: video
-                }
-              }
-            }
-          })
-        )
-      )
-    );
-  });
-  return Promise.all(promises);
+signinOldAccount.onclick = () => {
+  authenticate()
+    .then(loadClient)
+    .then(() => signinOldAccount.remove())
+    .then(() => getOldAccountData())
+    .then(() => {
+      notify("Data fetched successfully. Please sign in with your new account");
+      let content = `${USER_DATA.subscriptions.length} subscriptions | ${USER_DATA.liked.length} liked videos`;
+      oldData.innerHTML = content;
+    })
+    .then(() => signinNewAccount.classList.remove("d-none"))
+    .catch(err => {
+      notify(err);
+    });
+};
+
+signinNewAccount.onclick = () => {
+  authenticate()
+    .then(loadClient)
+    .then(() => signinNewAccount.remove())
+    .then(() => notify("Signed in with new account"))
+    .then(() => transfer.classList.remove("d-none"))
+    .catch(err => {
+      notify(err);
+    });
+};
+
+transfer.onclick = () => {
+  transferSubscriptions()
+    .then(transferLikedVideos)
+    .then(() => notify("Transfer successful!"))
+    .catch(err => {
+      notify("Error. Please try again");
+    });
 };
