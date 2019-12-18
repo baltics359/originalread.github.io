@@ -144,7 +144,7 @@ const transferSubscriptions = () => {
 
 const transferLikedVideos = () => {
   notify("Transferring liked videos...");
-  return Promise.all(
+  return Promise.allSettled(
     USER_DATA.liked.map(el =>
       gapi.client.youtube.videos.rate({
         id: el,
