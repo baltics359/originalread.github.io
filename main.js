@@ -51,6 +51,7 @@ const authenticate = () => {
         notify("Sign-in successful");
       },
       err => {
+        console.log(err);
         throw new Error("Sign-in failed. Please try again");
       }
     );
@@ -88,6 +89,7 @@ const getSubscriptions = (pageToken = null) => {
         }
       },
       err => {
+        console.log(err);
         throw new Error("Error fetching data. Please try again");
       }
     );
@@ -170,6 +172,7 @@ signinOldAccount.onclick = () => {
     })
     .then(() => signinNewAccount.classList.remove("d-none"))
     .catch(err => {
+      console.log(err);
       notify(err);
     });
 };
@@ -181,6 +184,7 @@ signinNewAccount.onclick = () => {
     .then(() => notify("Signed in with new account"))
     .then(() => transfer.classList.remove("d-none"))
     .catch(err => {
+      console.log(err);
       notify(err);
     });
 };
@@ -210,6 +214,7 @@ transfer.onclick = () => {
       )
     )
     .catch(err => {
+      console.log(err);
       notify("Error. Please try again");
     });
 };
