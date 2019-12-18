@@ -104,7 +104,7 @@ const getLikedVideos = (pageToken = null) => {
 const transferSubscriptions = () => {
   notify("Transferring subsciptions...");
   return Promise.all(
-    USER_DATA.subscriptions.slice(1, 3).map(el =>
+    USER_DATA.subscriptions.map(el =>
       gapi.client.youtube.subscriptions.insert({
         part: "snippet",
         resource: {
@@ -123,7 +123,7 @@ const transferSubscriptions = () => {
 const transferLikedVideos = () => {
   notify("Transferring liked videos...");
   return Promise.all(
-    USER_DATA.liked.slice(1, 3).map(el =>
+    USER_DATA.liked.map(el =>
       gapi.client.youtube.videos.rate({
         id: el,
         rating: "like"
