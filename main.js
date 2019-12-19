@@ -29,8 +29,7 @@ if (!Promise.allSettled) {
 }
 
 const USER_DATA = {
-  subscriptions: [],
-  liked: []
+  subscriptions: []
 };
 
 gapi.load("client:auth2", () => {
@@ -93,34 +92,6 @@ const getSubscriptions = (pageToken = null) => {
     );
 };
 
-const getLikedVideos = (pageToken = null) => {
-  notify("Fetching your liked videos...");
-
-  return gapi.client.youtube.videos
-    .list({
-      part: "id",
-      myRating: "like",
-      maxResults: 50,
-      pageToken: pageToken ? pageToken : undefined
-    })
-    .then(
-      response => {
-        response.result.items.forEach(element => {
-          USER_DATA.liked.push(element.id);
-        });
-        nextPage = response.result.nextPageToken;
-        if (nextPage)
-          return getLikedVideos((pageToken = response.result.nextPageToken));
-        else {
-          notify("Liked videos fetched successfully");
-        }
-      },
-      err => {
-        throw new Error("Error fetching data. Please try again");
-      }
-    );
-};
-
 const transferSubscriptions = () => {
   notify("Transferring subsciptions...");
   return Promise.allSettled(
@@ -140,20 +111,8 @@ const transferSubscriptions = () => {
   );
 };
 
-const transferLikedVideos = () => {
-  notify("Transferring liked videos...");
-  return Promise.allSettled(
-    USER_DATA.liked.map(el =>
-      gapi.client.youtube.videos.rate({
-        id: el,
-        rating: "like"
-      })
-    )
-  );
-};
-
 const getOldAccountData = () => {
-  return getSubscriptions().then(getLikedVideos);
+  return getSubscriptions();
 };
 
 signinOldAccount.onclick = () => {
@@ -163,7 +122,7 @@ signinOldAccount.onclick = () => {
     .then(() => getOldAccountData())
     .then(() => {
       notify("Data fetched successfully. Please sign in with your new account");
-      let content = `${USER_DATA.subscriptions.length} subscriptions | ${USER_DATA.liked.length} liked videos`;
+      let content = `| ${USER_DATA.subscriptions.length} subscriptions |`;
       oldData.innerHTML = content;
     })
     .then(() => signinNewAccount.classList.remove("d-none"))
@@ -185,7 +144,6 @@ signinNewAccount.onclick = () => {
 
 transfer.onclick = () => {
   let numSubscriptions = 0;
-  let numLikedVideos = 0;
   transferSubscriptions()
     .then(results => {
       results.forEach((result, num) => {
@@ -194,17 +152,9 @@ transfer.onclick = () => {
         }
       });
     })
-    .then(transferLikedVideos)
-    .then(results => {
-      results.forEach((result, num) => {
-        if (result.status == "fulfilled") {
-          numLikedVideos += 1;
-        }
-      });
-    })
     .then(() =>
       notify(
-        `${numSubscriptions}/${USER_DATA.subscriptions.length} subscriptions and ${numLikedVideos}/${USER_DATA.liked.length} liked videos transferred successfully!`
+        `${numSubscriptions}/${USER_DATA.subscriptions.length} subscriptions transferred successfully!`
       )
     )
     .catch(err => {
